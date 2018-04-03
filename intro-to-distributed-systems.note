@@ -1,0 +1,107 @@
+notes taken from "Operating Systems: Three Easy Pieces" @
+http://pages.cs.wisc.edu/~remzi/OSTEP/ chapter 48
+
+Intro to Distributed Systems
+
+ when you request a one web-page or interact with one service on the
+ internet,you are not interacting with one machine but rather a whole bunch
+ of distributed machines all over the globe.
+
+challenges of building a Distributed System:
+
+1-Failure:
+ it's the most important one. when we make a software solution made of many
+ componenets,these many pieces start to fail from time to time,yet we need
+ to build a system that appear to the clients as if it never fails.
+
+ The challenge: How to build a system that work when Components fails?
+
+2-Performance:
+ with a network connecting all the machines,a carefull planing must be
+ taken,trying to reduce the number of messages sent and make communication
+ as efficient(low latency,high performance)
+
+3-Security
+ having some assurence that the remote party is who they say they are,and
+ ensuring that no other parties can monitor or alter on-going communication
+ between two others.
+
+4-Communication:
+ The most basic aspect in a Distributed system.
+
+ how should machines within a distributed system communicate with one another?
+
+ using unreliable communication layer: like UDP/IP stack using   reliabel
+ communication layer: like TCP/IP stack
+
+---------------------------
+
+Communicatoin Abstractions:
+
+DSM:
+ Distributed shared memory enable processes on different machines to share
+ a large virtual address space.(more like a multi-threaded application
+ except that the processes are not runing on diffenect processors on the
+ same machine but rather on different machines!)
+
+DSM Problems:
+ what happens if a page fault occurs in memory? you go ask the machine who
+ own this memory page to fetch it for you. But what happens if that machine
+ failed(goes off)? the pages you want became unavailble..and what if you
+ distribute all your data structure across the machines? while some machines
+ become unavailable..you have unavailable data!
+Dealing with failure when parts of your address space go missing is hard.
+ Extra DSM problem is the performance: access to memory is not always
+ cheap,where we may cause a page faults and expensive fetches from remote
+ machines are required,we should organize communication so good that almost
+ no communication is needed!
+
+
+RPC: Remote Procedure Call
+ make the process of executing code at a remote machine as easy as calling
+ a local function.
+
+ RPC System consist of two pieces: Stub generator(Protocol Compiler) +
+ Run-time library.
+
+Stub generator:
+ remove some of the pain of packing function arguments and results into
+ messages by automating it.
+
+ The server make a list of functions that can be called(invoked) remotely and
+ the stub compiler take this list of functions and genereate 'client stub'
+ for clients to be able to call these functions remotely.
+
+ Internally, each of these functions in the client stub do all of the work
+ needed to perform the remote procedure call.
+
+ for the client it looks like a normal local function call but internally
+ the client stub:
+	1-create a msg buffer 2-pack the needed info into the msg buffer
+	3-send a msg to the destination RPC server 4-wait for the reply
+	5-unpack return code and other arguments 6-return to the caller
+ for the server the code of the stub is working on:
+	1-unpack the msg 2-call into the actual function 3-packages the
+	result 4-send the reply
+
+Run time library:
+ Is the one responsable for the heavy lifting in the working process of RPC.
+ first,how could a client know which server it should talk to for a prticular
+ service? Naming problem that can be solved in systems like DNS.
+
+ second,what communication layer to use? reliable(TCP/IP) or unreliable(UDP/IP)
+ building RPC call on top of a reliable communication layer cause major
+ inefficieny in performance so RPC use the unreliabel communication
+ layer(UPD/IP)
+
+ if we are building on top of unreliable communication,we hope RPC layer is
+ reliable..right?  The RPC layer achieves the desired level of responsibility
+ by using timeout/retry and acknowledgments.  By using some form of sequence
+ numbering, the communication layer can guarantee that each RPC takes place
+ exactly once (in the case of no failure), or at most once (in the case
+ where failure arises).
+
+ RPC call can be synchronous(the client do nothing while waiting for the
+ answer from the remote server) or asynchronous(where the client return to
+ it's normal work as soon as it calls out the RPC function call allowing it
+ to do more work while waiting for an answer from the remote function call).

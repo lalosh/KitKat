@@ -1,0 +1,119 @@
+//notes taken from http://pages.cs.wisc.edu/~remzi/OSTEP/vmm-intro.pdf
+
+Virtual Machine Monitor = hypervisor
+
+what is a hypervisor?
+ A hypervisor or virtual machine monitor (VMM) is computer software, firmware
+ or hardware that creates and runs virtual machines. A computer on which
+ a hypervisor runs one or more virtual machines is called a host machine,
+ and each virtual machine is called a guest machine.
+
+ the monitor sits between one or more operating systems and the hardware and
+ gives the illusion to each running OS that it controls the machine.  Behind
+ the scenes, however, the monitor actually is in control of the hardware,
+ and must multiplex running OSes across the physical resources of the machine.
+
+the OS must still think it is interacting with the physical hardware. Thus,
+transparency is a major goal of VMMs.
+
+why VMM?
+ server consolidation: running many OSs on fewer Hardware platforms
+functionality: running native apps on different platform testing & debugging:
+test and debug software written by developers on many platforms
+
+ understand virtualization via an example: Disco is a virtual machine
+ monitor for the MIPS processors which led to founding VMware(a leader in
+ virtualization technology)
+
+----------------
+
+CPU virtualization:
+ the VMM has to switch between executing processes on different OSs by the
+ 'Machine switch' in a way similar to the 'context switch'(which made to
+ save porcesses states and switch between them on the same machine)..so
+ machin switch is saving the state of the machine(registers,PC,priviliged
+ hardware state) and start the machine which to-be-run on the VMM,and later
+ on restore the state of the machine which get saved.
+
+
+What about system calls(traps)?
+
+ 1-on a non-virtual machine environment: an application need a low level
+ operation,requiring the hardware to switch from user-mode to kernel-mode,jump
+ to trap handler on the underlying OS,execute the wanted system-call and
+ return the results to the application after transfering mode to the user-mode
+ in hardware.
+
+ TL;DR: user-app(system-call:a trap to the OS) --> Hardware(user-mode
+ to kernel-mode) --> OS(handle system call) --> Hardware(kernel-mode to
+ user-mode) --> user-app(resume-execution)
+
+ 2-on a virtual machine environment: While booting the OS tries to install its
+ own trap handlers in memory for later use which in itself need priviliges
+ which notify the VMM(because it acts in place of the hardware itself)..now
+ the VMM record where in memory the OS is installing its trap handlers and
+ when at a later time a user process asked for a system call it knows where
+ that system call is placed in memory.
+
+ TL;DR: user-app(make a system-call) --> VMM(no hardware here)(VMM knows where
+ to find the target trap handler) --> back to OS(execute the trap-handler
+ functoin and return from trap) --> VMM(OS do return from trap and now VMM
+ do the real return-from-trap) --> user-app(resume-excution)
+
+ Certainly, because of the extra jumping around,virtualization might indeed
+ slow down system calls and thus could hurt performance.
+
+ What mode the OS should be running on?  kernel-mode? no it gives the OS
+ a full control over the hardware!  user-mode? no,cause the OS needs some
+ special memory place for its own data structures that is not accessible
+ from the user-space!  a mode between the two modes..on MIPS it's called
+ the supervisor mode which give the OS some memory that no one can access
+ but the OS itself.
+
+-----------------
+
+Virtualizing Memory:
+
+ Thus, we now have an additional layer of indirection: each OS maps
+ virtual-to-physical addresses via its per-process page tables; the VMM
+ maps the resulting physical mappings to underlying machine addresses via
+ its per-OS page tables.
+
+ In plain-english:virtual memory for each guest OS is mapped into the physical
+ memory(where VMM sit) and the VMM adding another layer of virtualization
+ mapping the physica memory of guest OSs into the per-OS page table in the
+ real hardware of the underlying HOST machine.
+
+ TL;DR: virtual address space --> physical memory(the VMM) --> machine
+ Memory(real memory hardware) The actual mapping that is done when a trap
+ occurs because of a TLB miss has more complicated page frame mapping
+ from virutal-guest-memory to physical-memory which in itself is the VMM
+ which do the mapping then to the real machine-memory(check Table B.5
+ @http://pages.cs.wisc.edu/~remzi/OSTEP/vmm-intro.pdf)
+
+ just like the OS has a page table for each process, the VMM must track the
+ physical-to-machine mappings for each virtual machine it is running.
+
+---------------
+
+Information Gap:
+ there is a gap of info between the running guest OSs and the VMM.
+the VMM doesn't everything about the guest OS.what if it was sleeping(sitting
+idle)?the VMM would give more cpu time to other guest OSs doing more
+useful work
+
+---------------
+
+para-virtualization
+ Running a modified OS to run on a VMM is generally called para-virtualization
+ [WSG02], as the virtualization provided by the VMM isn’t a complete one,
+ but rather a partial one requiring OS changes to operate effectively. Research
+ shows that a properly-designed para-virtualized system, with just the right
+ OS changes, can be made to be nearly as efficient a system without a VMM.
+
+
+summary:
+ While both the OS and VMM virtualize hardware, they do so by
+providing completely different interfaces; VMMs, unlike the OS, are not
+particularly meant to make the hardware easier to use.
+
